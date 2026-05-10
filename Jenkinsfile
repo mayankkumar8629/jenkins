@@ -43,48 +43,17 @@ pipeline {
             }
         }
 
-        stage('Debug Credential File') {
-            steps {
-                withCredentials([file(credentialsId: 'gcp-artifact-registry-key', variable: 'GCP_SA_KEY')]) {
-                    sh '''
-                        echo "Credential file path exists:"
-                        ls -l "$GCP_SA_KEY"
-
-                        echo ""
-                        echo "First 100 characters of the JSON file:"
-                        head -c 100 "$GCP_SA_KEY"
-                        echo ""
-
-                        echo ""
-                        echo "Checking Docker version:"
-                        docker --version
-                    '''
-                }
-            }
-        }
-
-        stage('Login to Artifact Registry') {
-            steps {
-                withCredentials([file(credentialsId: 'gcp-artifact-registry-key', variable: 'GCP_SA_KEY')]) {
-                    sh '''
-                        echo "Logging in to Google Artifact Registry..."
-                        docker login \
-                          -u _json_key \
-                          --password-stdin \
-                          https://us-west1-docker.pkg.dev < "$GCP_SA_KEY"
-                    '''
-                }
-            }
-        }
-
         stage('Push to Artifact Registry') {
             steps {
                 sh '''
+                    echo "Configuring Docker authentication for Google Artifact Registry..."
+                    gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
+
                     echo "Pushing Frontend image..."
-                    docker push '"${FRONTEND_IMAGE}"':latest
+                    docker push us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo/frontend:latest
 
                     echo "Pushing Backend image..."
-                    docker push '"${BACKEND_IMAGE}"':latest
+                    docker push us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo/backend:latest
                 '''
             }
         }
