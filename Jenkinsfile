@@ -35,7 +35,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'gcp-artifact-registry-key', variable: 'GCP_SA_KEY')]) {
                     script {
                         echo "Authenticating with Google Artifact Registry..."
-                        sh "cat ${GCP_SA_KEY} | docker login -u _json_key --password-stdin https://${GAR_REGION}-docker.pkg.dev"
+                        sh "cat ${GCP_SA_KEY} | docker login -u _json_key --password-stdin ${GAR_REGION}-docker.pkg.dev"
 
                         echo "Pushing Frontend Image..."
                         sh "docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}"
