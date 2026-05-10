@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        GAR_REGION       = "us-west1"
-        GAR_REPO         = "us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo"
-        FRONTEND_IMAGE   = "${GAR_REPO}/frontend"
-        BACKEND_IMAGE    = "${GAR_REPO}/backend"
-        IMAGE_TAG        = "${env.BUILD_ID}"
+        GAR_REGION     = "us-west1"
+        GAR_REPO       = "us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo"
+        FRONTEND_IMAGE = "${GAR_REPO}/frontend"
+        BACKEND_IMAGE  = "${GAR_REPO}/backend"
+        IMAGE_TAG      = "${env.BUILD_ID}"
     }
 
     stages {
@@ -33,18 +33,12 @@ pipeline {
         stage('Push to Artifact Registry') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-artifact-registry-key', variable: 'GCP_SA_KEY')]) {
-                    script {
-                        echo "Authenticating with Google Artifact Registry..."
-                        sh "docker login -u _json_key --password-stdin ${GAR_REGION}-docker.pkg.dev < ${GCP_SA_KEY}"
+                    sh """
+                        cat \$GCP_SA_KEY | docker login -u _json_key --password-stdin us-west1-docker.pkg.dev
 
-                        echo "Pushing Frontend Image..."
-                        sh "docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}"
-                        sh "docker push ${FRONTEND_IMAGE}:latest"
-
-                        echo "Pushing Backend Image..."
-                        sh "docker push ${BACKEND_IMAGE}:${IMAGE_TAG}"
-                        sh "docker push ${BACKEND_IMAGE}:latest"
-                    }
+                        docker push us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo/frontend:latest
+                        docker push us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo/backend:latest
+                    """
                 }
             }
         }
