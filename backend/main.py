@@ -17,7 +17,7 @@ def health_check():
 
 @app.get("/hello")
 def hello():
-    return {"message": "Hello, World!"}
+    return {"message": "Hello, World! , How are you doing?"}
 
 @app.get("/random")
 def random_number():
