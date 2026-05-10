@@ -33,12 +33,12 @@ pipeline {
         stage('Push to Artifact Registry') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-artifact-registry-key', variable: 'GCP_SA_KEY')]) {
-                    sh """
+                    sh '''
                         cat \$GCP_SA_KEY | docker login -u _json_key --password-stdin us-west1-docker.pkg.dev
 
                         docker push us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo/frontend:latest
                         docker push us-west1-docker.pkg.dev/q-gcp-00098-trell-snd-bx-26-04/jenkins-docker-repo/backend:latest
-                    """
+                    '''
                 }
             }
         }
