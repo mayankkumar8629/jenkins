@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>API Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --card: #11111a;
+      --border: #1e1e2e;
+      --accent: #7c3aed;
+      --accent2: #06d6a0;
+      --accent3: #f72585;
+      --text: #e2e8f0;
+      --muted: #64748b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #7c3aed, #06d6a0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      margin-bottom: 3rem;
+    }
+
+    .base-url {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 1.2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .base-url span { color: var(--accent2); }
+
+    input#base-url-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      width: 220px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      transition: border-color 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .card:nth-child(1)::before { background: var(--accent2); }
+    .card:nth-child(2)::before { background: var(--accent); }
+    .card:nth-child(3)::before { background: var(--accent3); }
+
+    .card:hover { transform: translateY(-3px); border-color: #2e2e4e; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title { font-size: 1.1rem; font-weight: 800; }
+    .card:nth-child(1) .card-title { color: var(--accent2); }
+    .card:nth-child(2) .card-title { color: var(--accent); }
+    .card:nth-child(3) .card-title { color: var(--accent3); }
+
+    .route-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.6rem;
+      border-radius: 100px;
+      color: var(--muted);
+    }
+
+    .card-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+    button {
+      background: transparent;
+      border: 1px solid currentColor;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      align-self: flex-start;
+    }
+
+    .card:nth-child(1) button { color: var(--accent2); }
+    .card:nth-child(2) button { color: var(--accent); }
+    .card:nth-child(3) button { color: var(--accent3); }
+
+    .card:nth-child(1) button:hover { background: var(--accent2); color: #0a0a0f; }
+    .card:nth-child(2) button:hover { background: var(--accent); color: #fff; }
+    .card:nth-child(3) button:hover { background: var(--accent3); color: #fff; }
+
+    .result {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      color: var(--text);
+      min-height: 44px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      display: none;
+    }
+
+    .result.visible { display: block; }
+    .result.error { color: #f87171; border-color: #3f1a1a; }
+    .result.loading { color: var(--muted); animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    footer {
+      margin-top: 4rem;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>API Dashboard</h1>
+  <p class="subtitle">// FastAPI · three endpoints · live calls</p>
+
+  <div class="base-url">
+    <span>BASE_URL =</span>
+    <input id="base-url-input" value="http://localhost:8000" />
+  </div>
+
+  <div class="grid">
+
+    <!-- Health -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Health Check</span>
+        <span class="route-badge">GET /health</span>
+      </div>
+      <p class="card-desc">Verify the API is up and running. Returns a simple status object.</p>
+      <button onclick="call('/health', this)">→ Run</button>
+      <div class="result" id="res-health"></div>
+    </div>
+
+    <!-- Hello -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Hello</span>
+        <span class="route-badge">GET /hello</span>
+      </div>
+      <p class="card-desc">Returns a classic greeting message from the server.</p>
+      <button onclick="call('/hello', this)">→ Run</button>
+      <div class="result" id="res-hello"></div>
+    </div>
+
+    <!-- Random -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Random Number</span>
+        <span class="route-badge">GET /random</span>
+      </div>
+      <p class="card-desc">Generates a random integer between 1 and 1000 on every request.</p>
+      <button onclick="call('/random', this)">→ Run</button>
+      <div class="result" id="res-random"></div>
+    </div>
+
+  </div>
+
+  <footer>// open index.html · point to your running FastAPI server</footer>
+
+  <script>
+    const routes = { '/health': 'res-health', '/hello': 'res-hello', '/random': 'res-random' };
+
+    async function call(route, btn) {
+      const base = document.getElementById('base-url-input').value.replace(/\/$/, '');
+      const resEl = document.getElementById(routes[route]);
+      resEl.className = 'result visible loading';
+      resEl.textContent = 'fetching…';
+      btn.disabled = true;
+      try {
+        const r = await fetch(base + route);
+        const data = await r.json();
+        resEl.className = 'result visible';
+        resEl.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        resEl.className = 'result visible error';
+        resEl.textContent = '✗ ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
