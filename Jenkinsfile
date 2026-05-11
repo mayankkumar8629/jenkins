@@ -101,33 +101,20 @@ pipeline {
             steps {
                 script {
                     echo "Retrieving Frontend image digest..."
-                    def frontendSha = sh(
-                        script: """
-                            gcloud artifacts docker images describe \
-                                ${CENTRAL_FRONTEND}:latest \
-                                --format='get\\(image_summary.digest\\)'
-                        """,
+                    env.FRONTEND_SHA = sh(
+                        script: "gcloud artifacts docker images describe ${CENTRAL_FRONTEND}:latest --format='get(image_summary.digest)'",
                         returnStdout: true
-                    ).trim().readLines().last()
+                    ).trim()
 
                     echo "Retrieving Backend image digest..."
-                    def backendSha = sh(
-                        script: """
-                            gcloud artifacts docker images describe \
-                                ${CENTRAL_BACKEND}:latest \
-                                --format='get\\(image_summary.digest\\)' 
-                        """,
+                    env.BACKEND_SHA = sh(
+                        script: "gcloud artifacts docker images describe ${CENTRAL_BACKEND}:latest --format='get(image_summary.digest)'",
                         returnStdout: true
-                    ).trim().readLines().last()
+                    ).trim()
 
-                    echo "Frontend SHA: ${frontendSha}"
-                    echo "Backend SHA: ${backendSha}"
+                    echo "Frontend SHA: ${env.FRONTEND_SHA}"
+                    echo "Backend SHA: ${env.BACKEND_SHA}"
 
-                    // Persist values for subsequent stages
-                    env.FRONTEND_SHA = frontendSha
-                    env.BACKEND_SHA  = backendSha
-
-                    // Fail fast if either digest is empty
                     if (!env.FRONTEND_SHA?.trim()) {
                         error("FRONTEND_SHA is empty.")
                     }
