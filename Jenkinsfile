@@ -13,8 +13,8 @@ pipeline {
 
         // Central Artifact Registry
         CENTRAL_REGISTRY  = "us-docker.pkg.dev/q-gcp-40701-gke-images-23-10/container-images-q-gcp-00098-trell-snd-bx-26-04"
-        CENTRAL_FRONTEND  = "${CENTRAL_REGISTRY}/frontend"
-        CENTRAL_BACKEND   = "${CENTRAL_REGISTRY}/backend"
+        CENTRAL_FRONTEND  = "${CENTRAL_REGISTRY}/mayank-frontend-k8s-image"
+        CENTRAL_BACKEND   = "${CENTRAL_REGISTRY}/mayank-backend-k8s-image"
 
         // GKE Details
         GKE_CLUSTER_NAME  = "jenkins-k8s-cluster-mayank"
