@@ -20,6 +20,10 @@ pipeline {
         GKE_CLUSTER_NAME  = "jenkins-k8s-cluster-mayank"
         GKE_ZONE          = "us-west1-a"
         K8S_API_URL       = "https://172.16.0.2"
+
+        // Will be populated in the "Get Image SHA" stage
+        FRONTEND_SHA      = ""
+        BACKEND_SHA       = ""
     }
 
     stages {
@@ -97,7 +101,7 @@ pipeline {
             steps {
                 script {
                     echo "Retrieving Frontend image digest..."
-                    FRONTEND_SHA = sh(
+                    def frontendSha = sh(
                         script: """
                             gcloud artifacts docker images describe \
                                 ${CENTRAL_FRONTEND}:latest \
@@ -107,7 +111,7 @@ pipeline {
                     ).trim()
 
                     echo "Retrieving Backend image digest..."
-                    BACKEND_SHA = sh(
+                    def backendSha = sh(
                         script: """
                             gcloud artifacts docker images describe \
                                 ${CENTRAL_BACKEND}:latest \
@@ -116,8 +120,21 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    echo "Frontend SHA: ${FRONTEND_SHA}"
-                    echo "Backend SHA: ${BACKEND_SHA}"
+                    echo "Frontend SHA: ${frontendSha}"
+                    echo "Backend SHA: ${backendSha}"
+
+                    // Persist values for subsequent stages
+                    env.FRONTEND_SHA = frontendSha
+                    env.BACKEND_SHA  = backendSha
+
+                    // Fail fast if either digest is empty
+                    if (!env.FRONTEND_SHA?.trim()) {
+                        error("FRONTEND_SHA is empty.")
+                    }
+
+                    if (!env.BACKEND_SHA?.trim()) {
+                        error("BACKEND_SHA is empty.")
+                    }
                 }
             }
         }
@@ -166,6 +183,9 @@ pipeline {
                     echo "Applying Kubernetes manifests..."
                     kubectl apply -f k8s/ --validate=false
 
+                    echo "Using Frontend SHA: ${FRONTEND_SHA}"
+                    echo "Using Backend SHA: ${BACKEND_SHA}"
+
                     echo "Updating frontend deployment image..."
                     kubectl set image deployment/frontend \
                         frontend=${CENTRAL_FRONTEND}@${FRONTEND_SHA}
@@ -191,10 +211,10 @@ pipeline {
     post {
         always {
             echo "Pipeline complete. Cleaning up local Docker images..."
+
             sh "docker rmi ${FRONTEND_IMAGE}:${IMAGE_TAG} ${FRONTEND_IMAGE}:latest || true"
             sh "docker rmi ${BACKEND_IMAGE}:${IMAGE_TAG} ${BACKEND_IMAGE}:latest || true"
 
-            // Optional cleanup of central registry tags
             sh "docker rmi ${CENTRAL_FRONTEND}:latest || true"
             sh "docker rmi ${CENTRAL_BACKEND}:latest || true"
         }
