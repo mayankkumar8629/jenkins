@@ -105,7 +105,7 @@ pipeline {
                         script: """
                             gcloud artifacts docker images describe \
                                 ${CENTRAL_FRONTEND}:latest \
-                                --format='get(image_summary.digest)' 
+                                --format='get\\(image_summary.digest\\)'
                         """,
                         returnStdout: true
                     ).trim().readLines().last()
@@ -115,7 +115,7 @@ pipeline {
                         script: """
                             gcloud artifacts docker images describe \
                                 ${CENTRAL_BACKEND}:latest \
-                                --format='get(image_summary.digest)' 
+                                --format='get\\(image_summary.digest\\)' 
                         """,
                         returnStdout: true
                     ).trim().readLines().last()
