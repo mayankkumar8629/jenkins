@@ -105,20 +105,20 @@ pipeline {
                         script: """
                             gcloud artifacts docker images describe \
                                 ${CENTRAL_FRONTEND}:latest \
-                                --format='get(image_summary.digest)'
+                                --format='get(image_summary.digest)' 2?>/dev/null
                         """,
                         returnStdout: true
-                    ).trim()
+                    ).trim().readLines().last()
 
                     echo "Retrieving Backend image digest..."
                     def backendSha = sh(
                         script: """
                             gcloud artifacts docker images describe \
                                 ${CENTRAL_BACKEND}:latest \
-                                --format='get(image_summary.digest)'
+                                --format='get(image_summary.digest)' 2?>/dev/null
                         """,
                         returnStdout: true
-                    ).trim()
+                    ).trim().readLines().last()
 
                     echo "Frontend SHA: ${frontendSha}"
                     echo "Backend SHA: ${backendSha}"
