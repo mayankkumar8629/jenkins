@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        // Artifact Registry (your project)
         GAR_REGION        = "us-west1"
         PROJECT_ID        = "q-gcp-00098-trell-snd-bx-26-04"
         GAR_REPO_NAME     = "jenkins-docker-repo"
@@ -15,7 +16,9 @@ pipeline {
         CENTRAL_FRONTEND  = "${CENTRAL_REGISTRY}/frontend"
         CENTRAL_BACKEND   = "${CENTRAL_REGISTRY}/backend"
 
-        // Kubernetes API Server
+        // GKE Details
+        GKE_CLUSTER_NAME  = "jenkins-k8s-cluster-mayank"
+        GKE_ZONE          = "us-west1-a"
         K8S_API_URL       = "https://172.16.0.2"
     }
 
@@ -53,6 +56,8 @@ pipeline {
         stage('Push to Your Artifact Registry') {
             steps {
                 sh """
+                    set -e
+
                     echo "Configuring Docker authentication for your Artifact Registry..."
                     gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
 
@@ -70,6 +75,8 @@ pipeline {
         stage('Tag and Push to Central Registry') {
             steps {
                 sh """
+                    set -e
+
                     echo "Configuring Docker authentication for central registry..."
                     gcloud auth configure-docker us-docker.pkg.dev --quiet
 
@@ -117,65 +124,66 @@ pipeline {
 
         stage('Deploy to GKE') {
             steps {
-                withCredentials([string(credentialsId: 'k8s-deploy-token', variable: 'K8S_TOKEN')]) {
-                    sh '''
-                        set -e
+                sh '''
+                    set -e
 
-                        echo "Checking kubectl version..."
-                        kubectl version --client
+                    echo "========================================"
+                    echo "Starting GKE Deployment"
+                    echo "========================================"
 
-                        echo "Testing connectivity to Kubernetes API..."
-                        curl -k -I --connect-timeout 5 ${K8S_API_URL} || true
+                    echo "Checking gcloud version..."
+                    gcloud --version
 
-                        echo "Token length (should be greater than zero):"
-                        echo ${#K8S_TOKEN}
+                    echo "Checking kubectl version..."
+                    kubectl version --client
 
-                        echo "Configuring cluster..."
-                        kubectl config set-cluster gke-cluster \
-                            --server=${K8S_API_URL} \
-                            --insecure-skip-tls-verify=true
+                    echo "Testing connectivity to private Kubernetes API..."
+                    curl -k -I --connect-timeout 5 ${K8S_API_URL} || true
 
-                        echo "Configuring credentials..."
-                        kubectl config set-credentials jenkins-deployer \
-                            --token="$K8S_TOKEN"
+                    echo "Getting cluster credentials..."
+                    gcloud container clusters get-credentials \
+                        ${GKE_CLUSTER_NAME} \
+                        --zone=${GKE_ZONE}
 
-                        echo "Configuring context..."
-                        kubectl config set-context gke-context \
-                            --cluster=gke-cluster \
-                            --user=jenkins-deployer
+                    echo "Updating kubeconfig to use private endpoint..."
+                    kubectl config set-cluster \
+                        gke_q-gcp-00098-trell-snd-bx-26-04_us-west1-a_jenkins-k8s-cluster-mayank \
+                        --server=${K8S_API_URL} \
+                        --insecure-skip-tls-verify=true
 
-                        echo "Switching context..."
-                        kubectl config use-context gke-context
+                    echo "Current Kubernetes context:"
+                    kubectl config current-context
 
-                        echo "Testing authentication and RBAC..."
-                        kubectl auth can-i get pods || true
+                    echo "Testing cluster access..."
+                    kubectl get nodes || true
 
-                        echo "Listing cluster nodes..."
-                        kubectl get nodes || true
+                    echo "Testing RBAC permissions..."
+                    kubectl auth can-i get pods || true
 
-                        echo "Listing namespaces..."
-                        kubectl get ns || true
+                    echo "Listing namespaces..."
+                    kubectl get ns || true
 
-                        echo "Applying Kubernetes manifests..."
-                        kubectl apply -f k8s/
+                    echo "Applying Kubernetes manifests..."
+                    kubectl apply -f k8s/ --validate=false
 
-                        echo "Updating frontend deployment image..."
-                        kubectl set image deployment/frontend \
-                            frontend=${CENTRAL_FRONTEND}@${FRONTEND_SHA}
+                    echo "Updating frontend deployment image..."
+                    kubectl set image deployment/frontend \
+                        frontend=${CENTRAL_FRONTEND}@${FRONTEND_SHA}
 
-                        echo "Updating backend deployment image..."
-                        kubectl set image deployment/backend \
-                            backend=${CENTRAL_BACKEND}@${BACKEND_SHA}
+                    echo "Updating backend deployment image..."
+                    kubectl set image deployment/backend \
+                        backend=${CENTRAL_BACKEND}@${BACKEND_SHA}
 
-                        echo "Waiting for frontend rollout..."
-                        kubectl rollout status deployment/frontend --timeout=300s
+                    echo "Waiting for frontend rollout..."
+                    kubectl rollout status deployment/frontend --timeout=300s
 
-                        echo "Waiting for backend rollout..."
-                        kubectl rollout status deployment/backend --timeout=300s
+                    echo "Waiting for backend rollout..."
+                    kubectl rollout status deployment/backend --timeout=300s
 
-                        echo "Deployment completed successfully."
-                    '''
-                }
+                    echo "========================================"
+                    echo "Deployment completed successfully"
+                    echo "========================================"
+                '''
             }
         }
     }
@@ -185,6 +193,10 @@ pipeline {
             echo "Pipeline complete. Cleaning up local Docker images..."
             sh "docker rmi ${FRONTEND_IMAGE}:${IMAGE_TAG} ${FRONTEND_IMAGE}:latest || true"
             sh "docker rmi ${BACKEND_IMAGE}:${IMAGE_TAG} ${BACKEND_IMAGE}:latest || true"
+
+            // Optional cleanup of central registry tags
+            sh "docker rmi ${CENTRAL_FRONTEND}:latest || true"
+            sh "docker rmi ${CENTRAL_BACKEND}:latest || true"
         }
     }
 }
