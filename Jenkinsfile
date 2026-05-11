@@ -141,7 +141,7 @@ pipeline {
 
         stage('Deploy to GKE') {
             steps {
-                sh '''
+                sh """
                     set -e
 
                     echo "========================================"
@@ -203,7 +203,7 @@ pipeline {
                     echo "========================================"
                     echo "Deployment completed successfully"
                     echo "========================================"
-                '''
+                """
             }
         }
     }
